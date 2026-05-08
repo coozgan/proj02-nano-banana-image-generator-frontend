@@ -44,6 +44,26 @@ export interface AppConfig {
   };
 }
 
+// Supported MIME types mirror the server's ALLOWED_MIME_TYPES (confirmed from Gemini docs)
+export const ALLOWED_REFERENCE_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+] as const;
+
+// Matches MAX_REFERENCE_IMAGES on the server (documented limit for gemini-3.1-flash-image-001)
+export const MAX_REFERENCE_IMAGES = 14;
+export const MAX_REFERENCE_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+export interface ReferenceImage {
+  id: string;
+  file: File;
+  previewUrl: string; // object URL for thumbnail — revoke on remove
+  error?: string;     // client-side validation error
+}
+
 export interface GalleryItem {
   id: string;
   image: GeneratedImage;

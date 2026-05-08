@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { api } from "../api";
-import type { GalleryItem, GenerateImageRequest } from "../types";
+import type { GalleryItem, GenerateImageRequest, ReferenceImage } from "../types";
 
 interface UseGenerateResult {
-  generate: (req: GenerateImageRequest) => Promise<void>;
+  generate: (req: GenerateImageRequest, referenceImages: ReferenceImage[]) => Promise<void>;
   loading: boolean;
   error: string | null;
   pendingCount: number;
@@ -17,12 +17,12 @@ export function useGenerate(
   const [error, setError] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
-  async function generate(req: GenerateImageRequest): Promise<void> {
+  async function generate(req: GenerateImageRequest, referenceImages: ReferenceImage[]): Promise<void> {
     setLoading(true);
     setError(null);
     setPendingCount(req.num_images ?? 1);
     try {
-      const res = await api.generateImage(req);
+      const res = await api.generateImage(req, referenceImages);
       if (res.warnings.length > 0) onWarnings(res.warnings);
       const items: GalleryItem[] = res.images.map((img) => ({
         id: crypto.randomUUID(),

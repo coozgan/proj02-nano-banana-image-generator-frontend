@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import { PromptPanel } from "./components/PromptPanel";
 import { SettingsPanel, type Settings } from "./components/SettingsPanel";
+import { ReferenceImagesPanel } from "./components/ReferenceImagesPanel";
 import { ResultGallery } from "./components/ResultGallery";
 import { ModelBadge } from "./components/ModelBadge";
 import { ToastContainer, type ToastMessage } from "./components/ui/Toast";
 import { useEnhance } from "./hooks/useEnhance";
 import { useGenerate } from "./hooks/useGenerate";
-import type { AppConfig, GalleryItem } from "./types";
+import type { AppConfig, GalleryItem, ReferenceImage } from "./types";
 
 const DEFAULT_SETTINGS: Settings = {
   aspectRatio: "1:1",
@@ -21,6 +22,7 @@ export default function App() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -64,14 +66,23 @@ export default function App() {
   };
 
   const handleGenerate = () => {
-    generate({
-      prompt,
-      negative_prompt: negativePrompt || undefined,
-      aspect_ratio: settings.aspectRatio,
-      image_size: settings.imageSize,
-      num_images: settings.numImages,
-      include_caption: settings.includeCaption,
-    });
+    // Block generation if any reference image has a client-side validation error
+    const invalid = referenceImages.find((img) => img.error);
+    if (invalid) {
+      addToast(`Fix or remove "${invalid.file.name}" before generating`, "error");
+      return;
+    }
+    generate(
+      {
+        prompt,
+        negative_prompt: negativePrompt || undefined,
+        aspect_ratio: settings.aspectRatio,
+        image_size: settings.imageSize,
+        num_images: settings.numImages,
+        include_caption: settings.includeCaption,
+      },
+      referenceImages
+    );
   };
 
   return (
@@ -109,7 +120,7 @@ export default function App() {
           </aside>
 
           {/* Main content */}
-          <main className="flex-1 min-w-0 flex flex-col gap-6">
+          <main className="flex-1 min-w-0 flex flex-col gap-4">
             {/* Prompt area */}
             <section>
               <PromptPanel
@@ -122,6 +133,15 @@ export default function App() {
                 enhancing={enhancing}
                 generating={generating}
                 config={config}
+              />
+            </section>
+
+            {/* Reference images */}
+            <section>
+              <ReferenceImagesPanel
+                images={referenceImages}
+                onChange={setReferenceImages}
+                disabled={enhancing || generating}
               />
             </section>
 
