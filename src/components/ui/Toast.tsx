@@ -14,7 +14,7 @@ interface ToastProps {
 
 export function ToastContainer({ toasts, onDismiss }: ToastProps) {
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onDismiss={onDismiss} />
       ))}
@@ -33,26 +33,38 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
     return () => clearTimeout(t);
   }, [toast.id, onDismiss]);
 
+  const accent =
+    toast.type === "error"   ? "border-error/40" :
+    toast.type === "warning" ? "border-tertiary/40" :
+                               "border-success/40";
+
+  const iconColor =
+    toast.type === "error"   ? "text-error" :
+    toast.type === "warning" ? "text-tertiary" :
+                               "text-success";
+
+  const iconName =
+    toast.type === "error"   ? "error" :
+    toast.type === "warning" ? "warning" :
+                               "check_circle";
+
   return (
     <div
       className={clsx(
-        "flex items-start gap-3 px-4 py-3 rounded-xl border shadow-2xl transition-all duration-300 card",
-        !visible && "opacity-0 translate-y-2",
-        toast.type === "error" && "border-red-500/30",
-        toast.type === "warning" && "border-amber-500/30",
-        toast.type === "success" && "border-emerald-500/30"
+        "pointer-events-auto flex items-start gap-3 px-4 py-3 glass-panel",
+        accent,
+        "transition-all duration-300 ease-out",
+        !visible && "opacity-0 translate-x-2"
       )}
     >
-      <span className="text-base mt-0.5 shrink-0">
-        {toast.type === "error" ? "✕" : toast.type === "warning" ? "⚠" : "✓"}
-      </span>
-      <p className="text-sm text-zinc-200 leading-snug flex-1">{toast.message}</p>
+      <span className={clsx("icon shrink-0 mt-0.5 text-[18px]", iconColor)}>{iconName}</span>
+      <p className="text-sm text-on-surface leading-snug flex-1">{toast.message}</p>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="text-[var(--text-muted)] hover:text-zinc-100 transition-colors shrink-0 mt-0.5 text-xs"
+        className="text-on-variant/70 hover:text-on-surface transition-colors shrink-0 mt-0.5"
         aria-label="Dismiss"
       >
-        ✕
+        <span className="icon text-[16px]">close</span>
       </button>
     </div>
   );

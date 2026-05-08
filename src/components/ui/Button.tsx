@@ -2,7 +2,7 @@ import { forwardRef } from "react";
 import clsx from "clsx";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "ghost" | "secondary" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
 }
@@ -14,46 +14,52 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={clsx(
-          "inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 rounded-lg select-none",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--banana)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]",
-          "disabled:opacity-40 disabled:cursor-not-allowed",
+          "relative inline-flex items-center justify-center gap-2 font-medium select-none",
+          "transition-all duration-200 ease-out whitespace-nowrap",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:shadow-glow",
+          "disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
 
           variant === "primary" && [
-            "bg-[var(--banana)] text-zinc-900 hover:bg-[var(--banana-dim)]",
-            "active:scale-[0.97]",
-            !disabled && !loading && "shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_0_0_1px_rgba(245,197,24,0.4)]",
+            "bg-primary text-primary-on rounded-lg",
+            "hover:bg-primary-container hover:text-on-surface",
+            "active:scale-[0.98]",
+            !disabled && !loading && "shadow-glow-lg",
           ],
           variant === "secondary" && [
-            "bg-[var(--surface-3)] text-zinc-200 border border-[var(--border)]",
-            "hover:bg-zinc-700 active:scale-[0.97]",
+            "rounded-lg glass-overlay text-on-surface",
+            "hover:border-primary/40 hover:bg-bg-surface-high/70",
+            "active:scale-[0.98]",
           ],
           variant === "ghost" && [
-            "text-zinc-400 hover:text-zinc-100 hover:bg-[var(--surface-2)]",
-            "active:scale-[0.97]",
+            "rounded-lg text-on-variant border border-transparent",
+            "hover:text-on-surface hover:bg-white/5 hover:border-white/10",
+            "active:scale-[0.98]",
           ],
           variant === "danger" && [
-            "bg-red-500/10 text-red-400 border border-red-500/20",
-            "hover:bg-red-500/20",
+            "rounded-lg bg-error/10 text-error border border-error/30",
+            "hover:bg-error/20 hover:border-error/50",
           ],
 
-          size === "sm" && "text-xs px-2.5 py-1.5 h-7",
-          size === "md" && "text-sm px-3.5 py-2 h-9",
-          size === "lg" && "text-sm px-5 py-2.5 h-10",
+          size === "sm" && "text-xs px-2.5 py-1 h-7 tracking-tight",
+          size === "md" && "text-sm px-4 py-2 h-9 tracking-tight",
+          size === "lg" && "text-sm px-5 py-2.5 h-11 tracking-tight font-semibold",
 
           className
         )}
         {...props}
       >
-        {loading ? (
-          <svg
-            className="w-4 h-4 animate-spin-slow"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z" />
+        {loading && (
+          <svg className="w-3.5 h-3.5 anim-spin" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.25" />
+            <path
+              d="M12 3 a 9 9 0 0 1 9 9"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              fill="none"
+            />
           </svg>
-        ) : null}
+        )}
         {children}
       </button>
     );

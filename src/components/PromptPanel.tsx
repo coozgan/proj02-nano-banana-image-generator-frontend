@@ -30,74 +30,97 @@ export function PromptPanel({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = () => {
+    if (!prompt) return;
     navigator.clipboard.writeText(prompt);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), 1400);
   };
 
   const canGenerate = prompt.trim().length > 0;
   const isWorking = enhancing || generating;
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Main prompt */}
-      <div className="card overflow-hidden focus-within:border-[var(--banana)] focus-within:banana-glow transition-all duration-200">
+    <div className="glass-panel p-5 sm:p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="label-caps">Prompt</span>
+        <span className="font-mono text-[10px] text-on-variant/60">
+          {prompt.length} / 2000
+        </span>
+      </div>
+
+      {/* Positive prompt */}
+      <div className="relative">
         <textarea
           ref={textareaRef}
           value={prompt}
           onChange={(e) => onPromptChange(e.target.value)}
-          placeholder="Describe the image you want to generate…"
+          placeholder="Describe what you want to see — subject, style, lighting, mood…"
           rows={5}
           disabled={isWorking}
-          className="w-full bg-transparent px-4 py-3.5 text-sm text-zinc-100 placeholder:text-[var(--text-faint)] resize-none focus:outline-none disabled:opacity-60 leading-relaxed"
+          maxLength={2000}
+          className="w-full input-recessed px-4 py-3 pr-28 text-[15px] leading-relaxed
+                     resize-none disabled:opacity-60 font-sans"
         />
 
-        {/* Prompt toolbar */}
-        <div className="flex items-center justify-between px-3 py-2 border-t border-[var(--border)] bg-[var(--surface-2)]">
-          <span className="font-mono text-[10px] text-[var(--text-faint)]">
-            {prompt.length} / 2000
-          </span>
-          <div className="flex items-center gap-1">
-            <Tooltip content="Copy prompt text">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopy}
-                disabled={!prompt || isWorking}
-                className="text-[10px] gap-1"
-              >
-                {copied ? (
-                  <>
-                    <svg className="w-3 h-3 text-emerald-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 8l3.5 3.5L13 4" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="5" y="5" width="9" height="9" rx="1.5"/>
-                      <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"/>
-                    </svg>
-                    Copy
-                  </>
-                )}
-              </Button>
-            </Tooltip>
-          </div>
+        {/* Floating Improve button */}
+        <div className="absolute top-2.5 right-2.5">
+          <Tooltip content={`Rewrite your prompt with ${config?.models?.enhance ?? "Gemini Flash"}. Returns a richer, more detailed version.`}>
+            <button
+              onClick={onEnhance}
+              disabled={!canGenerate || isWorking}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                         bg-primary/15 text-primary border border-primary/30
+                         hover:bg-primary/25 hover:border-primary/50
+                         disabled:opacity-30 disabled:cursor-not-allowed
+                         transition-all text-[11px] font-medium"
+            >
+              {enhancing ? (
+                <span className="icon text-[14px] anim-spin">progress_activity</span>
+              ) : (
+                <span className="icon text-[14px]">auto_fix_high</span>
+              )}
+              Improve
+            </button>
+          </Tooltip>
         </div>
       </div>
 
+      {/* Toolbar under textarea */}
+      <div className="flex items-center justify-between -mt-2">
+        <button
+          onClick={handleCopy}
+          disabled={!prompt}
+          className="flex items-center gap-1.5 label-caps
+                     hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed
+                     transition-colors"
+        >
+          {copied ? (
+            <>
+              <span className="icon text-[12px] text-success">check</span>
+              Copied
+            </>
+          ) : (
+            <>
+              <span className="icon text-[12px]">content_copy</span>
+              Copy
+            </>
+          )}
+        </button>
+        {prompt.length > 0 && (
+          <button
+            onClick={() => onPromptChange("")}
+            disabled={isWorking}
+            className="label-caps hover:text-on-surface
+                       disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       {/* Negative prompt */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-1.5">
-          <label className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
-            Negative Prompt
-          </label>
-          <Tooltip content={config?.unsupported?.negative_prompt ?? "Injected as 'Avoid: …' prefix in the prompt. Gemini has no native negative-prompt parameter."}>
-            <span className="font-mono text-[10px] text-[var(--text-faint)] cursor-help">(?)</span>
-          </Tooltip>
-        </div>
+      <div className="flex items-center gap-2.5 input-recessed px-3 py-2">
+        <span className="label-caps shrink-0">Avoid</span>
         <input
           type="text"
           value={negativePrompt}
@@ -105,47 +128,30 @@ export function PromptPanel({
           placeholder="blurry, watermark, text, low quality…"
           disabled={isWorking}
           maxLength={500}
-          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-[var(--text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--banana)] focus:border-[var(--banana)] transition-colors disabled:opacity-60"
+          className="flex-1 bg-transparent text-sm text-on-surface placeholder:text-on-variant/40
+                     focus:outline-none disabled:opacity-60"
         />
-      </div>
-
-      {/* Action row */}
-      <div className="flex items-center gap-2 pt-1">
-        <Tooltip content={`Rewrite your prompt using ${config?.models?.enhance ?? "Gemini Flash Lite"} for richer, more detailed output`}>
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={onEnhance}
-            loading={enhancing}
-            disabled={!canGenerate || isWorking}
-            className="flex-shrink-0"
-          >
-            {!enhancing && (
-              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M2 8h3M8 2v3M14 8h-3M8 14v-3" strokeLinecap="round"/>
-                <circle cx="8" cy="8" r="2.5"/>
-              </svg>
-            )}
-            Improve Prompt
-          </Button>
-        </Tooltip>
-
-        <Button
-          variant="primary"
-          size="md"
-          onClick={onGenerate}
-          loading={generating}
-          disabled={!canGenerate || isWorking}
-          className="flex-1"
+        <Tooltip
+          side="bottom"
+          content={config?.unsupported?.negative_prompt ?? "Gemini has no native negative-prompt parameter. Injected as 'Avoid: ...' prefix in the prompt text."}
         >
-          {!generating && (
-            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M2 13L8 3l6 10H2z" strokeLinejoin="round"/>
-            </svg>
-          )}
-          Generate
-        </Button>
+          <span className="icon text-[14px] text-on-variant/60 cursor-help">info</span>
+        </Tooltip>
       </div>
+
+      {/* Primary action */}
+      <Button
+        variant="primary"
+        size="lg"
+        onClick={onGenerate}
+        loading={generating}
+        disabled={!canGenerate || isWorking}
+        className="w-full"
+      >
+        {!generating && <span className="icon text-[18px]">auto_awesome</span>}
+        <span>Generate Image</span>
+        <span className="font-mono text-[10px] uppercase tracking-widest opacity-60 ml-1">⏎</span>
+      </Button>
     </div>
   );
 }

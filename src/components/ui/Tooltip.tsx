@@ -5,36 +5,36 @@ interface TooltipProps {
   content: string;
   children: React.ReactNode;
   className?: string;
+  side?: "top" | "bottom";
 }
 
-export function Tooltip({ content, children, className }: TooltipProps) {
+export function Tooltip({ content, children, className, side = "top" }: TooltipProps) {
   const [visible, setVisible] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const show = () => {
-    timer.current = setTimeout(() => setVisible(true), 400);
-  };
-  const hide = () => {
-    clearTimeout(timer.current);
-    setVisible(false);
-  };
+  const show = () => { timer.current = setTimeout(() => setVisible(true), 350); };
+  const hide = () => { clearTimeout(timer.current); setVisible(false); };
 
   return (
     <div
       className={clsx("relative inline-flex", className)}
       onMouseEnter={show}
       onMouseLeave={hide}
+      onFocus={show}
+      onBlur={hide}
     >
       {children}
       {visible && (
         <div
           role="tooltip"
-          className="absolute bottom-full left-0 mb-2 z-50 w-64 pointer-events-none"
+          className={clsx(
+            "absolute z-50 w-64 pointer-events-none anim-fadein",
+            side === "top" ? "bottom-full mb-2 left-0" : "top-full mt-2 left-0"
+          )}
         >
-          <div className="bg-zinc-800 border border-[var(--border)] rounded-lg px-3 py-2 shadow-xl">
-            <p className="text-xs text-zinc-300 leading-relaxed">{content}</p>
+          <div className="glass-panel px-3 py-2 shadow-2xl">
+            <p className="text-xs text-on-variant leading-relaxed">{content}</p>
           </div>
-          <div className="w-2 h-2 bg-zinc-800 border-r border-b border-[var(--border)] rotate-45 absolute left-4 -bottom-1" />
         </div>
       )}
     </div>

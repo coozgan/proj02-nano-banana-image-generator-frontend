@@ -1,56 +1,131 @@
 import { useState } from "react";
-import { Button } from "./ui/Button";
 import { EmptyState } from "./EmptyState";
+import { Lightbox } from "./Lightbox";
 import type { GalleryItem } from "../types";
 
 interface ResultGalleryProps {
   items: GalleryItem[];
   pendingCount?: number;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   onClearAll?: () => void;
+  onPromptSelect?: (prompt: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-export function ResultGallery({ items, pendingCount = 0, onClearAll }: ResultGalleryProps) {
+export function ResultGallery({
+  items,
+  pendingCount = 0,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
+  onClearAll,
+  onPromptSelect,
+  onDelete,
+}: ResultGalleryProps) {
   const hasItems = items.length > 0 || pendingCount > 0;
 
+  if (!hasItems) {
+    return <EmptyState onPromptSelect={onPromptSelect} />;
+  }
+
   return (
-    <div>
-      {!hasItems ? (
-        <EmptyState />
-      ) : (
-        <>
-          {items.length > 0 && (
-            <div className="flex items-center justify-between mb-4">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
-                {items.length} image{items.length !== 1 ? "s" : ""} this session
-              </span>
-              <Button variant="ghost" size="sm" onClick={onClearAll} className="text-[10px]">
-                Clear all
-              </Button>
-            </div>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <span className="label-caps">Gallery</span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] text-on-variant/70">
+            {items.length} {items.length === 1 ? "image" : "images"}
+          </span>
+          {items.length > 0 && onClearAll && (
+            <button
+              onClick={onClearAll}
+              className="label-caps hover:text-error transition-colors"
+            >
+              Clear all
+            </button>
           )}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Skeleton placeholders for pending */}
-            {Array.from({ length: pendingCount }).map((_, i) => (
-              <div key={`skeleton-${i}`} className="aspect-square rounded-xl overflow-hidden animate-skeleton" />
-            ))}
-            {/* Real images — newest first */}
-            {[...items].reverse().map((item) => (
-              <ImageCard key={item.id} item={item} />
-            ))}
+        </div>
+      </div>
+
+      <div
+        className="grid gap-3 sm:gap-4
+                   grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
+                   md:auto-rows-[260px]"
+      >
+        {/* Pending tiles */}
+        {Array.from({ length: pendingCount }).map((_, i) => (
+          <div
+            key={`skeleton-${i}`}
+            className="aspect-square md:aspect-auto rounded-xl glass-overlay flex items-center justify-center"
+          >
+            <PulseDots />
           </div>
-        </>
+        ))}
+        {/* Real images */}
+        {items.map((item, idx) => (
+          <ImageCard key={item.id} item={item} index={idx} onDelete={onDelete} />
+        ))}
+      </div>
+
+      {hasMore && onLoadMore && (
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={onLoadMore}
+            disabled={loadingMore}
+            className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full
+                       glass-overlay text-on-surface
+                       hover:border-primary/40 hover:bg-bg-surface-high/70
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {loadingMore ? (
+              <PulseDots />
+            ) : (
+              <>
+                <span className="icon text-[16px] text-primary group-hover:scale-110 transition-transform">expand_more</span>
+                <span className="text-sm font-medium">Load more</span>
+              </>
+            )}
+          </button>
+        </div>
       )}
     </div>
   );
 }
 
-function ImageCard({ item }: { item: GalleryItem }) {
+function PulseDots() {
+  return (
+    <div className="flex items-center gap-1.5" aria-label="Loading">
+      <span className="w-1.5 h-1.5 rounded-full bg-primary anim-pulse-dot" />
+      <span className="w-1.5 h-1.5 rounded-full bg-primary anim-pulse-dot" style={{ animationDelay: "0.2s" }} />
+      <span className="w-1.5 h-1.5 rounded-full bg-primary anim-pulse-dot" style={{ animationDelay: "0.4s" }} />
+    </div>
+  );
+}
+
+function bentoSpan(index: number): string {
+  // Featured tile every 7 items: spans 2 cols + 2 rows from md+
+  if (index % 7 === 0) return "md:col-span-2 md:row-span-2";
+  return "";
+}
+
+function ImageCard({
+  item,
+  index,
+  onDelete,
+}: {
+  item: GalleryItem;
+  index: number;
+  onDelete?: (id: string) => void;
+}) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   const src = `data:${item.image.mime_type};base64,${item.image.data_base64}`;
 
-  const handleDownload = () => {
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const ext = item.image.mime_type.split("/")[1] ?? "png";
     const a = document.createElement("a");
     a.href = src;
@@ -58,100 +133,106 @@ function ImageCard({ item }: { item: GalleryItem }) {
     a.click();
   };
 
-  const handleCopyPrompt = () => {
+  const handleCopyPrompt = (e: React.MouseEvent) => {
+    e.stopPropagation();
     navigator.clipboard.writeText(item.prompt);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), 1400);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete?.(item.id);
   };
 
   return (
-    <div className="group relative animate-fadein card overflow-hidden hover:border-zinc-600 transition-colors">
+    <div className={`anim-fadein ${bentoSpan(index)}`}>
       <div
-        className="relative cursor-pointer overflow-hidden bg-[var(--surface-2)]"
+        className="group relative h-full w-full cursor-pointer overflow-hidden rounded-xl
+                   glass-overlay aspect-square md:aspect-auto
+                   hover:border-primary/40 transition-colors"
         onClick={() => setExpanded(true)}
-        style={{ aspectRatio: "1/1" }}
       >
         <img
           src={src}
           alt={item.prompt}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           loading="lazy"
         />
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-end">
-          <div className="p-3 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200 w-full">
-            <p className="text-xs text-zinc-200 line-clamp-2 leading-snug">{item.prompt}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Card footer */}
-      <div className="flex items-center gap-1 px-2 py-1.5 bg-[var(--surface-2)] border-t border-[var(--border)]">
-        <span className="font-mono text-[9px] text-[var(--text-faint)] flex-1 truncate">
-          {item.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </span>
-        <button
-          onClick={handleCopyPrompt}
-          title="Copy prompt"
-          className="p-1 text-[var(--text-muted)] hover:text-zinc-100 transition-colors rounded"
-        >
-          {copied ? (
-            <svg className="w-3 h-3 text-emerald-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 8l3.5 3.5L13 4" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          ) : (
-            <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="5" y="5" width="9" height="9" rx="1.5"/>
-              <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"/>
-            </svg>
+        {/* Top-left badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+          {item.image.text && (
+            <span className="px-1.5 py-0.5 rounded label-caps bg-bg-base/65 backdrop-blur-sm border border-white/10 text-secondary">
+              CAPTION
+            </span>
           )}
-        </button>
-        <button
-          onClick={handleDownload}
-          title="Download"
-          className="p-1 text-[var(--text-muted)] hover:text-zinc-100 transition-colors rounded"
-        >
-          <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M8 2v8M5 7l3 3 3-3" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M2 12v1.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V12" strokeLinecap="round"/>
-          </svg>
-        </button>
+        </div>
+
+        {/* Hover gradient + prompt */}
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-bg-base/95 via-bg-base/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+        <div className="absolute inset-x-0 bottom-0 p-3 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+          <p className="text-xs text-on-surface line-clamp-2 leading-snug font-display">
+            {item.prompt}
+          </p>
+          <p className="font-mono text-[9px] text-on-variant/70 mt-1 tracking-wider">
+            {item.timestamp.toLocaleString([], {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+
+        {/* Hover action chips */}
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <ActionChip
+            label={copied ? "Copied" : "Copy prompt"}
+            iconName={copied ? "check" : "content_copy"}
+            onClick={handleCopyPrompt}
+            highlight={copied}
+          />
+          <ActionChip label="Download" iconName="download" onClick={handleDownload} />
+          {onDelete && (
+            <ActionChip label="Delete" iconName="delete" onClick={handleDelete} variant="danger" />
+          )}
+        </div>
       </div>
 
-      {/* Caption if present */}
-      {item.image.text && (
-        <div className="px-3 py-2 border-t border-[var(--border)] bg-[var(--surface-0)]">
-          <p className="text-xs text-zinc-400 leading-relaxed">{item.image.text}</p>
-        </div>
-      )}
-
-      {/* Lightbox */}
       {expanded && (
-        <Lightbox src={src} alt={item.prompt} onClose={() => setExpanded(false)} />
+        <Lightbox src={src} alt={item.prompt} prompt={item.prompt} onClose={() => setExpanded(false)} />
       )}
     </div>
   );
 }
 
-function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+function ActionChip({
+  label,
+  iconName,
+  onClick,
+  highlight,
+  variant,
+}: {
+  label: string;
+  iconName: string;
+  onClick: (e: React.MouseEvent) => void;
+  highlight?: boolean;
+  variant?: "danger";
+}) {
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 animate-fadein"
-      onClick={onClose}
+    <button
+      onClick={onClick}
+      title={label}
+      className={`w-8 h-8 rounded-lg flex items-center justify-center backdrop-blur-md border transition-all
+        ${highlight
+          ? "bg-success/90 text-bg-base border-success"
+          : variant === "danger"
+          ? "bg-bg-base/70 text-on-surface border-white/10 hover:bg-error/85 hover:text-bg-base hover:border-error"
+          : "bg-bg-base/70 text-on-surface border-white/10 hover:bg-primary/85 hover:text-primary-on hover:border-primary"}`}
     >
-      <button
-        className="absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-800 border border-[var(--border)] text-zinc-400 hover:text-zinc-100 flex items-center justify-center transition-colors"
-        onClick={onClose}
-      >
-        ✕
-      </button>
-      <img
-        src={src}
-        alt={alt}
-        className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      />
-    </div>
+      <span className="icon text-[16px]">{iconName}</span>
+    </button>
   );
 }
