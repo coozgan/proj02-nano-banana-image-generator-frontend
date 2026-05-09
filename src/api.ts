@@ -39,11 +39,30 @@ export const api = {
     return apiFetch<AppConfig>("/config");
   },
 
-  enhancePrompt(prompt: string, style?: string): Promise<EnhancePromptResponse> {
+  enhancePrompt(
+    prompt: string,
+    style?: string,
+    referenceImages: ReferenceImage[] = []
+  ): Promise<EnhancePromptResponse> {
+    if (referenceImages.length === 0) {
+      return apiFetch<EnhancePromptResponse>("/api/enhance-prompt", {
+        method: "POST",
+        body: JSON.stringify({ prompt, style }),
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Multipart so the enhance model can use the uploaded images for visual context.
+    // Same field name (`reference_image`) as /api/generate-image; shared backend parser.
+    const form = new FormData();
+    form.append("prompt", prompt);
+    if (style) form.append("style", style);
+    for (const ref of referenceImages) {
+      form.append("reference_image", ref.file, ref.file.name);
+    }
     return apiFetch<EnhancePromptResponse>("/api/enhance-prompt", {
       method: "POST",
-      body: JSON.stringify({ prompt, style }),
-      headers: { "Content-Type": "application/json" },
+      body: form,
     });
   },
 

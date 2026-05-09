@@ -59,10 +59,18 @@ export default function App() {
   }, [drawerOpen]);
 
   const handleEnhance = async () => {
-    const enhanced = await enhance(prompt);
+    const invalid = referenceImages.find((img) => img.error);
+    if (invalid) {
+      addToast(`Fix or remove "${invalid.file.name}" before improving`, "error");
+      return;
+    }
+    const enhanced = await enhance(prompt, undefined, referenceImages);
     if (enhanced) {
       setPrompt(enhanced);
-      addToast("Prompt improved", "success");
+      const note = referenceImages.length > 0
+        ? `Prompt improved using ${referenceImages.length} reference image${referenceImages.length === 1 ? "" : "s"}`
+        : "Prompt improved";
+      addToast(note, "success");
     }
   };
 
